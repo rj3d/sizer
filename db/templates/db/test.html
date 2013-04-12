@@ -1,0 +1,6 @@
+{% if account_info %}
+    <p>Dropbox user {{ account_info.display_name }} from {{ account_info.country}}</p>
+    <p>{{ account_info.quota_info.normal}} bytes used out of {{ account_info.quota_info.quota}}</p>
+{% else %}
+    <p>Error: No user info</p>
+{% endif %}
