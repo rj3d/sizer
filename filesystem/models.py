@@ -6,6 +6,7 @@ class FSNode(models.Model):
     name = models.TextField()
     size = models.IntegerField()
     is_dir = models.BooleanField()
+    full_path = models.TextField()
 
 class FSUser(models.Model):
     user = models.OneToOneField(User, related_name="fs")
