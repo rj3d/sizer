@@ -1,68 +1,92 @@
-from models import FSUser, Filesystem
+from models import FSUser, FSNode
 from dropbox import client
 from db.views import dropbox_user_required
 import json
 from django.http import HttpResponse
 
-def _recursively_populate(dropbox_client, path, parent_id):
+def _recursively_populate_folder(dropbox_client, path, parent_id):
     metadata = dropbox_client.metadata(path)
-    f = Filesystem()
-    f.parent = parent_id
-    if not metadata['is_dir']:
-        f.is_dir = False
-        f.size = metadata['bytes']
-    else:
-        f.is_dir = True
-        temp_size = 0
-        if 'contents' in metadata:
-            for child_metadata in metadata['contents']:
-                cur_child = _recursively_populate(dropbox_client, child_metadata['path'], f.id)
-                temp_size += cur_child.size
-        f.size = temp_size
-    f.save()
-    return f
+    fsn = FSNode()
+    fsn.parent = parent_id
+    fsn.name = metadata['path'].split('/')[-1]
+    fsn.is_dir = True
+    print "Recursively populating folder " + fsn.name
+    temp_size = 0
+    if 'contents' in metadata:
+        for child_metadata in metadata['contents']:
+            if not child_metadata['is_dir']:
+                c = FSNode()
+                c.size = child_metadata['bytes']
+                c.name = child_metadata['path'].split('/')[-1]
+                c.is_dir = False
+                temp_size += c.size
+                c.save()
+            else:
+                child_dir = _recursively_populate_folder(dropbox_client, child_metadata['path'], fsn.id)
+                temp_size += child_dir.size
+    fsn.size = temp_size
+    fsn.save()
+    return fsn
 
 def _populate_filesystem(user, dropbox_client):
     #If an old filesystem exists, delete the root. Then create a new one and populate
     try:
-        f = user.fs
-        old_root = Filesystem.objects.get(id=f.root_id)
+        fsu = user.fs
+        old_root = fsu.root
         old_root.delete()
     except:
-        f = FSUser()
-        f.user = user
-    f.cursor = dropbox_client.delta()['cursor']
+        fsu = FSUser()
+        fsu.user = user
+    fsu.cursor = dropbox_client.delta()['cursor']
     #Recursively populate the filesystem database
-    root = _recursively_populate(dropbox_client, '/', None)
-    f.root_id = root.id
-    f.save()
-    return f
+    root = _recursively_populate_folder(dropbox_client, '/', None)
+    fsu.root = root
+    fsu.save()
+    return fsu
 
 def _update_fs(user, dropbox_client, delta_dict):
-    updated = _populate_filesystem(user, dropbox_client) #TODO Actually replace with an update function
-    return updated
+    return user.fs #TODO Actually replace with an update function
+
 
 def _get_or_update_fs(user, dropbox_client):
+    print "Get or updating"
     try:
-        f = user.fs
-        c = f.cursor
+        print 1
+        fsu = user.fs
+        print 2
+        c = fsu.cursor
+        print 3
         delta_dict = dropbox_client.delta(c)
+        print 4
         if len(delta_dict['entries']) > 0:
-            f = _update_fs(user, dropbox_client, delta_dict)
+            fsu = _update_fs(user, dropbox_client, delta_dict)
+        print 5
     except:
-        f = _populate_filesystem(user, dropbox_client)
-    return f
+        fsu = _populate_filesystem(user, dropbox_client)
+    return fsu
 
-def _get_fs_dict(root_id):
-    fs = {}
-    root = Filesystem.objects.get(id=root_id)
-    children = Filesystem.objects.filter(parent=root.id)
+def _recursively_generate_fs_dict(node):
+    cur_dict = {}
+    cur_dict["name"] = node.name
+    print "Recursively generating " + node.name
+    if not node.is_dir:
+        cur_dict["value"] = node.size
+    else:
+        cur_dict["children"] = []
+        children = FSNode.objects.filter(parent=node)
+        for child in children:
+            cur_dict["children"].append(_recursively_generate_fs_dict(child))
+    return cur_dict
 
+
+def _get_fs_dict(root):
+    fs_dict = _recursively_generate_fs_dict(root)
+    return fs_dict
 
 @dropbox_user_required
 def display_filesystem_json(request, dropbox_client):
     user = request.user
     fs_user = _get_or_update_fs(user,dropbox_client)
-    fs_dict = _get_fs_dict(fs_user.root_id)
+    fs_dict = _get_fs_dict(fs_user.root)
     return HttpResponse(json.dumps(fs_dict), content_type="application/json")
 
