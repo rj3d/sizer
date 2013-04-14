@@ -6,6 +6,7 @@ from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
     (r'^db/', include('db.urls')),
+    (r'^fs/', include('filesystem.urls')),
     (r'^accounts/login/$', 'django.contrib.auth.views.login'),
     # Examples:
     # url(r'^$', 'sizer.views.home', name='home'),

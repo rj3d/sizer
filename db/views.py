@@ -17,7 +17,7 @@ DROPBOX_REQUEST_SESSION_KEY = 'dropbox_request_token3'  # random temp storage na
 
 def _saveAccessToken(user, oauth_token):
     try:
-        d = user.django_dropbox
+        d = user.db
     except:
         d = DBUser()
         d.user = user
