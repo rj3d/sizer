@@ -63,4 +63,4 @@ def dropbox_user_required(func):
 def display_dropbox_user_info(request, dropbox_client):
     account_info = dropbox_client.account_info()
     context = {'account_info': account_info}
-    return render(request, 'db/test.html', context)
+    return render(request, 'test.html', context)

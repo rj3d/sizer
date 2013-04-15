@@ -1,9 +1,10 @@
 from models import FSUser, FSNode
-from dropbox import client
 from db.views import dropbox_user_required
-import json
 from django.http import HttpResponse
+from django.shortcuts import render_to_response
 
+from dropbox import client
+import json
 def _recursively_populate_folder(dropbox_client, path, parent):
     metadata = dropbox_client.metadata(path)
     fsn = FSNode()
@@ -89,4 +90,8 @@ def display_filesystem_json(request, dropbox_client):
     fs_user = _get_or_update_fs(user,dropbox_client)
     fs_dict = _get_fs_dict(fs_user.root)
     return HttpResponse(json.dumps(fs_dict), content_type="application/json")
+
+@dropbox_user_required
+def render_treemap(request, dropbox_client):
+    return render_to_response('treemap.html')
 
