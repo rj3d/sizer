@@ -51,7 +51,9 @@
             .style("left", margin.left + "px")
             .style("top", margin.top + "px");
 
-    d3.json("json", function(error, root) {
+    d3.json("./json")
+      .get("depth=1&id=1", function(error, root) {
+        console.log(root);
         var node = div.datum(root).selectAll(".node")
                 .data(treemap.nodes)
                 .enter().append("div")
@@ -59,18 +61,6 @@
                 .call(position)
                 .style("background", function(d) { return d.children ? color(d.name) : null; })
                 .text(function(d) { return d.children ? null : d.name; });
-
-        d3.selectAll("input").on("change", function change() {
-            var value = this.value === "count"
-                    ? function() { return 1; }
-                    : function(d) { return d.size; };
-
-            node
-                    .data(treemap.value(value).nodes)
-                    .transition()
-                    .duration(1500)
-                    .call(position);
-        });
     });
 
     function position() {

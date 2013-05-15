@@ -6,4 +6,13 @@
 <body>
 
 </body>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script>
+
+
+    var id = 1
+    d3.json("./json")
+    .get("?depth=2&id=" + id , function(error, data) { console.log(data); });
+</script>
+
 </html>

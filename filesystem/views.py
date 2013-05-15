@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from db.utilities import dropbox_user_required
+from .models import FSNode
 from .utilities import get_or_update_fs, get_fs_dict
 import json
 
@@ -9,7 +10,11 @@ import json
 def render_filesystem_json(request, dropbox_client):
     user = request.user
     fs_user = get_or_update_fs(user, dropbox_client)
-    fs_dict = get_fs_dict(fs_user.root)
+    if 'depth' in request.REQUEST and 'id' in request.REQUEST:
+        node = FSNode.objects.get(id=int(request.REQUEST['id'])) #TODO Put int() in try/except block
+        fs_dict = get_fs_dict(node, int(request.REQUEST['depth']))
+    else:
+        fs_dict = get_fs_dict(fs_user.root)
     return HttpResponse(json.dumps(fs_dict), content_type="application/json")
 
 @dropbox_user_required
