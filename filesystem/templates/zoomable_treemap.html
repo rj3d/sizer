@@ -2,7 +2,7 @@
 <html>
 <head>
     <title></title>
-
+{% load staticfiles %}
 <style>
 
 #chart {
@@ -54,8 +54,7 @@ rect.parent {
 
 <p id="chart">
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
-
+<script src="{% static "filesystem/d3.v3.min.js" %}"></script>
 <script>
 
 var margin = {top: 20, right: 0, bottom: 0, left: 0},
@@ -154,7 +153,23 @@ d3.json("json", function(root) {
 
     g.filter(function(d) { return d.children; })
         .classed("children", true)
-        .on("click", transition);
+        .on("click", transition)
+        .on("mouseover", function(){
+            d3.selectAll(this.childNodes)
+                .filter(".child")
+                    .style("fill", function(){
+                        var color = d3.select(this).style("fill");
+                        return d3.rgb(color).brighter().toString();
+                    });
+        })
+        .on("mouseout", function(){
+            d3.selectAll(this.childNodes)
+                .filter(".child")
+                    .style("fill", function(){
+                        var color = d3.select(this).style("fill");
+                        return d3.rgb(color).darker().toString();
+                    });
+        });
 
     g.selectAll(".child")
         .data(function(d) { return d.children || [d]; })
@@ -162,15 +177,15 @@ d3.json("json", function(root) {
         .attr("class", "child")
         .style("fill", function(d) {
                 var ext = (/[.]/.exec(d.name)) ? /[^.]+$/.exec(d.name) : d.name;
-                return d.is_dir ? color(d.is_dir) : color(ext) })
+                return d.is_dir ? color(d.is_dir) : color(ext); })
         .call(rect);
 
 
     g.append("rect")
         .attr("class", "parent")
         .call(rect)
-      .append("title")
-        .text(function(d) { return formatNumber(d.value); });
+        .append("title")
+        .text(function(d) { return formatNumber(d.value); })
 
     g.append("text")
         .attr("dy", ".75em")
@@ -228,7 +243,7 @@ d3.json("json", function(root) {
 
   function name(d) {
     return d.parent
-        ? name(d.parent) + "." + d.name
+        ? name(d.parent) + "/" + d.name
         : d.name;
   }
 });
