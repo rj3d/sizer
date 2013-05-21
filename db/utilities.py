@@ -22,13 +22,11 @@ def _saveAccessToken(user, oauth_token):
     d.access_token_secret = oauth_token.secret
     d.save()
 
-
 def _dropboxConnect(request, db_sess):
     request_token = db_sess.obtain_request_token()
     request.session[DROPBOX_REQUEST_SESSION_KEY] = request_token
     url = db_sess.build_authorize_url(request_token, request.build_absolute_uri())
     return HttpResponseRedirect(url)
-
 
 def dropbox_user_required(func):
     @login_required
@@ -44,14 +42,13 @@ def dropbox_user_required(func):
                 access_token_secret = request.user.db.access_token_secret
                 db_sess.set_token(access_token, access_token_secret)
             db_c = client.DropboxClient(db_sess)
-        except ObjectDoesNotExist:
-            return _dropboxConnect(request, db_sess)
-        try:
             return func(request, *args, dropbox_client=db_c, **kwargs)
-        except ErrorResponse, e:
+        except ErrorResponse, e :
             if e.status == 401:
-                _dropboxConnect(request, db_sess)# re authentication needed
+                return _dropboxConnect(request, db_sess)# re authentication needed
             else:
                 raise e # let django log the exception that the user did not handle
+        except ObjectDoesNotExist:
+            return _dropboxConnect(request, db_sess)
 
     return _dropbox_wrap
